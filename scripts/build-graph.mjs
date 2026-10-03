@@ -384,4 +384,32 @@ const out = {
 };
 fs.writeFileSync(path.join(ROOT, 'public', 'graph.json'), JSON.stringify(out));
 console.log(`Wrote public/graph.json (${nodes.length} nodes, ${edges.length} edges)`);
+
+// ---------- Building hours for the app's clock slider ----------
+
+// hours.mon = ['07:30', '02:00'] means open 7:30 am Monday until 2 am Tuesday. null = closed.
+const HHMM = /^\d{1,2}:\d{2}$/;
+const buildingRows = readCsv(path.join(ROOT, 'data', 'buildings.csv'));
+const buildings = [];
+for (const r of buildingRows) {
+  const lat = Number(r.lat);
+  const lng = Number(r.lng);
+  if (!r.name || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+    console.warn(`buildings.csv: skipping row without a name and lat/lng: ${JSON.stringify(r)}`);
+    continue;
+  }
+  const hours = {};
+  for (const d of ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']) {
+    const open = r[`${d}_open`];
+    const close = r[`${d}_close`];
+    if (HHMM.test(open ?? '') && HHMM.test(close ?? '')) hours[d] = [open, close];
+    else {
+      if (open || close) console.warn(`buildings.csv: ${r.name} ${d} hours "${open}"-"${close}" aren't HH:MM, treating as closed`);
+      hours[d] = null;
+    }
+  }
+  buildings.push({ name: r.name, lat, lng, hours });
+}
+fs.writeFileSync(path.join(ROOT, 'public', 'buildings.json'), JSON.stringify(buildings, null, 2));
+console.log(`Wrote public/buildings.json (${buildings.length} buildings)`);
 report(edges);

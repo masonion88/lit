@@ -4,7 +4,6 @@ import * as maplibregl from 'maplibre-gl';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import * as turf from '@turf/turf';
 import { getTimes } from 'suncalc';
-import buildingsCsv from '../data/buildings.csv?raw';
 
 // Every tunable number lives here.
 const CONFIG = {
@@ -20,7 +19,17 @@ const CONFIG = {
   },
   blueLightFarM: 150,
   buildingNearM: 30,
+  // Clock slider: minutes after 6 pm (0 = 6 pm, 600 = 4 am).
+  clock: { startHour: 18, maxMin: 600, stepMin: 15 },
+  // Late-night TCAT window from Cornell's student safety page, as minutes after midnight.
+  lateBus: { from: 18 * 60 + 30, until: 2 * 60 + 30 },
 };
+
+const LINKS = {
+  blueLights: 'https://cupolice.cornell.edu/safety-security/blue-light-services',
+  studentSafety: 'https://scl.cornell.edu/families/cornell-family-resource-hub/student-safety-and-support',
+};
+const SOURCES = ['verified', 'osm', 'mapillary', 'estimated', 'unknown'];
 
 const COLORS = {
   lit: '#ffd60a',
@@ -32,6 +41,8 @@ const COLORS = {
   unknown: '#8b8f98',
   fastest: '#38bdf8',
   litRoute: '#f472b6',
+  open: '#4ade80',
+  closed: '#4b5563',
 };
 const LIT = new Set(['lit', 'likely lit', 'limited', 'estimated lit']);
 const DARK_OR_UNKNOWN = new Set(['dark', 'estimated dark', 'unknown']);
@@ -39,6 +50,11 @@ const DARK_OR_UNKNOWN = new Set(['dark', 'estimated dark', 'unknown']);
 // ---------- Page skeleton ----------
 
 document.querySelector('#app').innerHTML = `
+  <div id="help" role="note">
+    Emergency: <a href="tel:911">911</a> · Cornell Police non-emergency:
+    <a href="tel:+16072551111">607-255-1111</a> · Blue Light phones connect directly to Cornell Police.
+  </div>
+  <main id="main">
   <div id="map"></div>
   <aside id="panel">
     <header>
@@ -61,9 +77,25 @@ document.querySelector('#app').innerHTML = `
         <button id="now">Now</button>
       </div>
     </div>
+    <div class="clock">
+      <div class="row">
+        <label class="label" for="clock">Tonight</label>
+        <output id="clock-out" for="clock"></output>
+      </div>
+      <input id="clock" type="range" min="0" max="${CONFIG.clock.maxMin}" step="${CONFIG.clock.stepMin}" />
+      <div class="ticks"><span style="left:0%">6 pm</span><span style="left:30%">9 pm</span><span style="left:60%">12 am</span><span style="left:100%">4 am</span></div>
+    </div>
     <p id="sun" class="sun"></p>
 
     <div id="cards"></div>
+    <div id="extra-cards"></div>
+
+    <section id="honesty" class="card">
+      <h2>Data honesty</h2>
+      <p class="fine">Path segments by where their lighting value comes from:</p>
+      <dl id="source-counts" class="stats"></dl>
+      <p class="no-crime">No crime data, by design.</p>
+    </section>
 
     <details id="legend">
       <summary>Legend &amp; data sources</summary>
@@ -75,6 +107,9 @@ document.querySelector('#app').innerHTML = `
         <li><i class="sw" style="background:${COLORS.unknown}"></i>Unknown</li>
         <li><i class="sw route" style="background:${COLORS.fastest}"></i>Fastest route</li>
         <li><i class="sw route" style="background:${COLORS.litRoute}"></i>Lit route</li>
+        <li><i class="sw route stretch"></i>Lit route's longest dark or unknown stretch</li>
+        <li><i class="bdot" style="background:${COLORS.open}"></i>Building open at the chosen time</li>
+        <li><i class="bdot" style="background:${COLORS.closed}"></i>Building closed</li>
       </ul>
       <p class="label">Every lighting value has a source:</p>
       <dl class="sources">
@@ -87,35 +122,24 @@ document.querySelector('#app').innerHTML = `
       <p class="fine">Multipliers apply only between sunset and sunrise. This app shows tradeoffs in the physical environment. It does not use crime data and cannot tell you a route is risk-free.</p>
     </details>
   </aside>
+  </main>
 `;
 
 // ---------- Data loading ----------
 
-function parseCsv(text) {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim());
-  if (lines.length < 2) return [];
-  const split = (line) => {
-    const out = [];
-    let cur = '';
-    let quoted = false;
-    for (const ch of line) {
-      if (ch === '"') quoted = !quoted;
-      else if (ch === ',' && !quoted) { out.push(cur.trim()); cur = ''; }
-      else cur += ch;
-    }
-    out.push(cur.trim());
-    return out;
-  };
-  const header = split(lines[0]);
-  return lines.slice(1).map((l) => Object.fromEntries(split(l).map((v, i) => [header[i], v])));
-}
-
-const buildings = parseCsv(buildingsCsv)
-  .map((r) => ({ ...r, lat: Number(r.lat), lng: Number(r.lng) }))
-  .filter((b) => b.name && Number.isFinite(b.lat) && Number.isFinite(b.lng));
-
-const graph = await (await fetch('/graph.json')).json();
+// Both files are written by scripts/build-graph.mjs.
+const [graph, buildings] = await Promise.all([
+  fetch('/graph.json').then((r) => r.json()),
+  fetch('/buildings.json').then((r) => (r.ok ? r.json() : [])).catch(() => []),
+]);
 const { nodes, edges } = graph;
+
+// Data honesty panel: how many path segments get their lighting from each source.
+const sourceCounts = Object.fromEntries(SOURCES.map((s) => [s, 0]));
+for (const e of edges) sourceCounts[e.lighting_source] = (sourceCounts[e.lighting_source] ?? 0) + 1;
+document.querySelector('#source-counts').innerHTML = Object.entries(sourceCounts)
+  .map(([s, n]) => `<dt>${s}</dt><dd>${n.toLocaleString()} <small>(${Math.round((n / edges.length) * 100)}%)</small></dd>`)
+  .join('');
 const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
 // Neighbor list: node id -> [{ to, edge index }]. Paths are walkable both ways.
@@ -167,17 +191,25 @@ const toMin = (hhmm) => {
 // Open if inside today's hours, or inside yesterday's hours that ran past midnight.
 function isOpen(b, date) {
   const now = date.getHours() * 60 + date.getMinutes();
-  const today = DAYS[date.getDay()];
-  const yesterday = DAYS[(date.getDay() + 6) % 7];
-  const o = toMin(b[`${today}_open`]);
-  const c = toMin(b[`${today}_close`]);
+  const [o, c] = (b.hours[DAYS[date.getDay()]] ?? []).map(toMin);
   if (o != null && c != null) {
     if (c > o && now >= o && now < c) return true;
     if (c <= o && now >= o) return true;
   }
-  const yo = toMin(b[`${yesterday}_open`]);
-  const yc = toMin(b[`${yesterday}_close`]);
+  const [yo, yc] = (b.hours[DAYS[(date.getDay() + 6) % 7]] ?? []).map(toMin);
   return yo != null && yc != null && yc <= yo && now < yc;
+}
+
+// The night a time belongs to starts at 6 pm; times before 5 am belong to the previous evening.
+function eveningOf(date) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate(), CONFIG.clock.startHour);
+  if (date.getHours() < 5) d.setDate(d.getDate() - 1);
+  return d;
+}
+
+function isLateBusTime(date) {
+  const m = date.getHours() * 60 + date.getMinutes();
+  return m >= CONFIG.lateBus.from || m < CONFIG.lateBus.until;
 }
 
 function sunInfo(date) {
@@ -289,11 +321,13 @@ function exposure(steps, date) {
   let lit = 0;
   let litConfirmed = 0;
   let stretch = 0;
+  let stretchFrom = 0;
   let longestStretch = 0;
+  let longestSteps = [];
   let maxBlue = 0;
   let blueMissing = false;
   const open = new Set();
-  for (const { edge } of steps) {
+  steps.forEach(({ edge }, i) => {
     const e = edges[edge];
     length += e.length_m;
     if (LIT.has(e.lighting)) {
@@ -301,21 +335,26 @@ function exposure(steps, date) {
       if (e.lighting_source === 'verified' || e.lighting_source === 'osm') litConfirmed += e.length_m;
     }
     if (DARK_OR_UNKNOWN.has(e.lighting)) {
+      if (stretch === 0) stretchFrom = i;
       stretch += e.length_m;
-      longestStretch = Math.max(longestStretch, stretch);
+      if (stretch > longestStretch) {
+        longestStretch = stretch;
+        longestSteps = steps.slice(stretchFrom, i + 1);
+      }
     } else {
       stretch = 0;
     }
     if (e.dist_to_bluelight_m == null) blueMissing = true;
     else maxBlue = Math.max(maxBlue, e.dist_to_bluelight_m);
     for (const b of edgeBuildings[edge]) if (isOpen(b, date)) open.add(b.name);
-  }
+  });
   return {
     length,
     minutes: length / CONFIG.walkSpeedMps / 60,
     litPct: length ? (lit / length) * 100 : 0,
     litConfirmedPct: length ? (litConfirmed / length) * 100 : 0,
     longestStretch,
+    longestSteps,
     maxBlue: blueMissing ? null : maxBlue,
     open: [...open],
   };
@@ -352,15 +391,48 @@ const emptyLine = { type: 'Feature', properties: {}, geometry: { type: 'LineStri
 const colorByLighting = ['match', ['get', 'lighting'], ...Object.entries(COLORS).slice(0, 7).flat(), COLORS.unknown];
 const pathWidth = ['interpolate', ['linear'], ['zoom'], 13, 1, 16, 3, 19, 6];
 
+function buildingsGeojson(date) {
+  return {
+    type: 'FeatureCollection',
+    features: buildings.map((b) => ({
+      type: 'Feature',
+      properties: { name: b.name, open: isOpen(b, date) },
+      geometry: { type: 'Point', coordinates: [b.lng, b.lat] },
+    })),
+  };
+}
+
+// "Walk with a friend" card, pinned to the middle of the Lit route's longest dark stretch.
+const friendPopup = new maplibregl.Popup({ closeOnClick: false, maxWidth: '270px', className: 'friend', offset: 12 });
+let friendDismissed = false;
+let friendRemovingInCode = false;
+friendPopup.on('close', () => { if (!friendRemovingInCode) friendDismissed = true; });
+function hideFriend() {
+  friendRemovingInCode = true;
+  friendPopup.remove();
+  friendRemovingInCode = false;
+}
+
 const markers = {
   start: new maplibregl.Marker({ color: '#22c55e' }),
   end: new maplibregl.Marker({ color: '#ef4444' }),
 };
 
 map.on('load', () => {
+  map.addSource('stretch', { type: 'geojson', data: emptyLine });
   map.addSource('route-fastest', { type: 'geojson', data: emptyLine });
   map.addSource('route-lit', { type: 'geojson', data: emptyLine });
   map.addSource('paths', { type: 'geojson', data: pathsGeojson });
+  map.addSource('buildings', { type: 'geojson', data: buildingsGeojson(new Date()) });
+
+  // The Lit route's longest dark-or-unknown stretch: a white glow under everything.
+  map.addLayer({
+    id: 'stretch',
+    type: 'line',
+    source: 'stretch',
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': '#ffffff', 'line-width': 20, 'line-opacity': 0.35, 'line-blur': 4 },
+  });
 
   // Routes go underneath as wide glows, offset so both show where they overlap.
   const routeLayer = (id, color, offset) => ({
@@ -389,6 +461,18 @@ map.on('load', () => {
     paint: { 'line-color': colorByLighting, 'line-width': pathWidth, 'line-dasharray': [2, 1.5] },
   });
 
+  map.addLayer({
+    id: 'buildings',
+    type: 'circle',
+    source: 'buildings',
+    paint: {
+      'circle-color': ['case', ['get', 'open'], COLORS.open, COLORS.closed],
+      'circle-radius': ['case', ['get', 'open'], 7, 5],
+      'circle-stroke-color': '#111318',
+      'circle-stroke-width': 2,
+    },
+  });
+
   // Default route comes from the build script: Collegetown -> Robert Purcell.
   setPoint('start', graph.places[0]);
   setPoint('end', graph.places[1]);
@@ -398,6 +482,7 @@ map.on('load', () => {
 map.on('click', (ev) => {
   setPoint(state.picking, { lat: ev.lngLat.lat, lng: ev.lngLat.lng });
   setPicking(state.picking === 'start' ? 'end' : 'start');
+  friendDismissed = false;
   update();
 });
 
@@ -426,6 +511,25 @@ whenInput.value = toInputValue(new Date());
 whenInput.addEventListener('change', () => update());
 $('#now').addEventListener('click', () => { whenInput.value = toInputValue(new Date()); update(); });
 
+const currentDate = () => (whenInput.value ? new Date(whenInput.value) : new Date());
+
+// Dragging the clock re-routes live ('input' fires on every step, not just on release).
+const clock = $('#clock');
+clock.addEventListener('input', () => {
+  const evening = eveningOf(currentDate());
+  whenInput.value = toInputValue(new Date(evening.getTime() + Number(clock.value) * 60000));
+  update();
+});
+
+
+// Keep the slider in step with the date picker. Times outside 6 pm-4 am sit at the slider's ends.
+function syncClock(date) {
+  const min = (date - eveningOf(date)) / 60000;
+  clock.value = Math.min(CONFIG.clock.maxMin, Math.max(0, Math.round(min / CONFIG.clock.stepMin) * CONFIG.clock.stepMin));
+  const inRange = min >= 0 && min <= CONFIG.clock.maxMin;
+  $('#clock-out').textContent = inRange ? fmtTime(date) : `${fmtTime(date)} (outside 6 pm–4 am, drag to pick a time tonight)`;
+}
+
 function setPicking(which) {
   state.picking = which;
   $('#pick-start').classList.toggle('active', which === 'start');
@@ -438,8 +542,10 @@ $('#pick-end').addEventListener('click', () => setPicking('end'));
 
 function update({ fit = false } = {}) {
   if (!state.start || !state.end) return;
-  const date = whenInput.value ? new Date(whenInput.value) : new Date();
+  const date = currentDate();
+  syncClock(date);
   const sun = sunInfo(date);
+  map.getSource('buildings').setData(buildingsGeojson(date));
   const openNear = edgeBuildings.map((list) => list.some((b) => isOpen(b, date)));
   const ctx = { night: sun.night, openNear };
 
@@ -451,8 +557,10 @@ function update({ fit = false } = {}) {
 
   const fastest = dijkstra(state.start.id, state.end.id, walkSeconds);
   const litRoute = dijkstra(state.start.id, state.end.id, (i) => litCost(i, ctx));
+  $('#extra-cards').innerHTML = isLateBusTime(date) ? lateBusCard() : '';
   if (!fastest || !litRoute) {
     $('#cards').innerHTML = '<p class="card">No walking connection between these points.</p>';
+    hideFriend();
     return;
   }
 
@@ -463,6 +571,7 @@ function update({ fit = false } = {}) {
   const fx = exposure(fastest, date);
   const lx = exposure(litRoute, date);
   $('#cards').innerHTML = card('Fastest', COLORS.fastest, fx, fx) + card('Lit', COLORS.litRoute, lx, fx);
+  showFriendCard(sun.night ? lx : null);
 
   if (fit) {
     const all = [...routeCoords(fastest), ...routeCoords(litRoute)];
@@ -473,6 +582,35 @@ function update({ fit = false } = {}) {
       duration: 0,
     });
   }
+}
+
+// Shows the friend card at the middle of the stretch after dark; hides it otherwise.
+function showFriendCard(x) {
+  const coords = x && x.longestStretch > 0 ? routeCoords(x.longestSteps) : [];
+  map.getSource('stretch').setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } });
+  if (coords.length < 2 || friendDismissed) {
+    hideFriend();
+    return;
+  }
+  const line = turf.lineString(coords);
+  const middle = turf.along(line, turf.length(line, { units: 'meters' }) / 2, { units: 'meters' }).geometry.coordinates;
+  friendPopup
+    .setLngLat(middle)
+    .setHTML(`
+      <h3>Walk with a friend</h3>
+      <p>This ${Math.round(x.longestStretch)} m stretch of the Lit route is dark or has no lighting data.</p>
+      <p>In Cornell's <b>Rave Guardian</b> app, a friend can act as your guardian, and the app has a safety timer you can set for your walk.</p>
+      <a href="${LINKS.blueLights}" target="_blank" rel="noopener">Cornell Police: Blue Light services</a>`);
+  if (!friendPopup.isOpen()) friendPopup.addTo(map);
+}
+
+function lateBusCard() {
+  return `
+    <section class="card info">
+      <h2>Late-night bus</h2>
+      <p>Cornell's student safety page lists TCAT bus service from 6:30 pm to 2:30 am. Riding may be an option instead of walking.</p>
+      <a href="${LINKS.studentSafety}" target="_blank" rel="noopener">Cornell student safety and support</a>
+    </section>`;
 }
 
 function card(name, color, x, base) {

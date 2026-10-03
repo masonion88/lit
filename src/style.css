@@ -14,6 +14,21 @@
 * { box-sizing: border-box; }
 html, body, #app { margin: 0; height: 100%; overflow: hidden; }
 
+/* Help bar on top, map area fills the rest */
+#app { display: flex; flex-direction: column; }
+#help {
+  flex: none;
+  padding: 8px 16px;
+  padding-top: calc(8px + env(safe-area-inset-top));
+  background: #7f1d1d;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: center;
+  z-index: 2;
+}
+#help a { color: #fff; font-weight: 700; white-space: nowrap; }
+#main { position: relative; flex: 1; min-height: 0; }
 #map { position: absolute; inset: 0; }
 
 /* Phone first: a bottom sheet that scrolls */
@@ -62,7 +77,38 @@ button { cursor: pointer; }
 .sun { margin: 4px 0 12px; color: var(--muted); font-size: 13px; }
 .sun b { color: var(--text); }
 
-#cards { display: grid; gap: 10px; }
+.clock { margin: 4px 0 10px; }
+.clock .row { margin: 0 0 4px; }
+#clock-out { font-weight: 600; text-align: right; }
+#clock { width: 100%; min-height: 32px; accent-color: var(--accent); margin: 0; }
+.ticks { position: relative; height: 16px; margin: 0 10px; font-size: 11px; color: var(--muted); }
+.ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+
+#cards, #extra-cards { display: grid; gap: 10px; }
+#extra-cards:not(:empty) { margin-top: 10px; }
+.card.info { border-left-color: #34d399; }
+.card p { margin: 6px 0; }
+.card a, .friend a { color: var(--accent); }
+#honesty { margin-top: 10px; border-left-color: var(--muted); }
+.no-crime { font-weight: 700; margin-bottom: 0; }
+
+/* "Walk with a friend" pop-up on the map */
+.friend .maplibregl-popup-content {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #fff;
+  border-radius: 12px;
+  padding: 12px 28px 12px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.friend h3 { margin: 0 0 4px; font-size: 15px; }
+.friend p { margin: 4px 0; }
+.friend .maplibregl-popup-close-button { color: var(--text); font-size: 20px; width: 28px; height: 28px; }
+.friend.maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color: #fff; }
+.friend.maplibregl-popup-anchor-top .maplibregl-popup-tip { border-bottom-color: #fff; }
+.friend.maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: #fff; }
+.friend.maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: #fff; }
 .card {
   margin: 0;
   padding: 12px;
@@ -85,6 +131,8 @@ button { cursor: pointer; }
 .sw { display: inline-block; flex: none; width: 26px; height: 5px; border-radius: 3px; margin-right: 10px; }
 .sw.dashed { background: repeating-linear-gradient(90deg, currentColor 0 7px, transparent 7px 12px); }
 .sw.route { height: 9px; opacity: 0.8; }
+.sw.stretch { background: #fff; opacity: 0.45; height: 12px; }
+.bdot { display: inline-block; flex: none; width: 12px; height: 12px; border-radius: 50%; margin: 0 17px 0 7px; border: 2px solid #111318; }
 .sources { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 6px 0; }
 .sources dt { font-family: ui-monospace, monospace; color: var(--accent); }
 .sources dd { margin: 0; color: var(--muted); }
