@@ -1,5 +1,5 @@
-// Builds public/graph.json: a walking graph of the area around Olin Library and
-// Robert Purcell, with a lighting value (and its source) on every edge.
+// Builds public/graph.json: a walking graph covering Collegetown, central campus, and
+// Robert Purcell (North Campus), with a lighting value (and its source) on every edge.
 // Run with: node scripts/build-graph.mjs
 
 import fs from 'node:fs';
@@ -10,10 +10,14 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const RAW = path.join(ROOT, 'data', 'raw');
 const USER_AGENT = 'Lit/0.1 (hackathon project: campus walking-route lighting map)';
 
-const PLACES = [
-  'Olin Library, Cornell University',
-  'Robert Purcell Community Center, Cornell University',
-];
+// Demo route: Collegetown -> North Campus.
+const START = 'Collegetown, Ithaca, NY';
+const END = 'Robert Purcell Community Center, Cornell University';
+// Not a route endpoint: only stretches the bounding box over central campus.
+const CENTRAL_CAMPUS = 'Olin Library, Cornell University';
+
+// Rough outline of Collegetown. A geocode outside it is treated as wrong.
+const COLLEGETOWN_BOUNDS = { south: 42.4355, north: 42.4455, west: -76.492, east: -76.479 };
 const MARGIN_M = 300;
 const WALKABLE = [
   'footway', 'path', 'pedestrian', 'steps', 'service', 'residential', 'living_street',
@@ -26,31 +30,71 @@ const writeJson = (file, data) => fs.writeFileSync(file, JSON.stringify(data, nu
 
 // ---------- 1. Geocode (Nominatim, cached, max 1 request/second) ----------
 
-async function geocode() {
+// Looks up one place. Answers (including "nothing found", saved as null) are cached.
+let lastNominatim = 0;
+async function nominatim(q) {
   const file = path.join(RAW, 'places.json');
   const cache = readJson(file) ?? {};
-  let first = true;
-  for (const q of PLACES) {
-    if (cache[q]) continue;
-    // Nominatim doesn't match "Cornell University" as a place, so fall back to the city name.
-    let hit = null;
-    for (const attempt of [q, q.replace('Cornell University', 'Ithaca')]) {
-      if (!first) await sleep(1100);
-      first = false;
-      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(attempt)}`;
-      const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
-      if (!res.ok) throw new Error(`Nominatim ${res.status} for "${attempt}"`);
-      // Skip roads and bus stops that share the building's name.
-      hit = (await res.json()).find((h) => h.class !== 'highway');
-      if (hit) break;
-    }
-    if (!hit) throw new Error(`Nominatim found nothing for "${q}"`);
-    cache[q] = { lat: Number(hit.lat), lng: Number(hit.lon), display_name: hit.display_name };
-    writeJson(file, cache);
+  if (q in cache) return cache[q];
+  // Nominatim doesn't match "Cornell University" as a place, so fall back to the city name.
+  let hit = null;
+  for (const attempt of [...new Set([q, q.replace('Cornell University', 'Ithaca')])]) {
+    await sleep(Math.max(0, lastNominatim + 1100 - Date.now()));
+    lastNominatim = Date.now();
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(attempt)}`;
+    const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+    if (!res.ok) throw new Error(`Nominatim ${res.status} for "${attempt}"`);
+    // Skip roads and bus stops that share the place's name.
+    hit = (await res.json()).find((h) => h.class !== 'highway');
+    if (hit) break;
   }
+  cache[q] = hit ? { lat: Number(hit.lat), lng: Number(hit.lon), display_name: hit.display_name } : null;
+  writeJson(file, cache);
+  return cache[q];
+}
+
+const inside = (p, b) => p && p.lat >= b.south && p.lat <= b.north && p.lng >= b.west && p.lng <= b.east;
+
+// Fallback for Collegetown: the node where College Avenue meets Dryden Road (Overpass, cached).
+async function collegeAndDryden() {
+  const file = path.join(RAW, 'college-dryden.json');
+  const cached = readJson(file);
+  if (cached) return cached;
+  const b = COLLEGETOWN_BOUNDS;
+  const query = `[out:json][timeout:60];
+way["highway"]["name"="College Avenue"](${b.south},${b.west},${b.north},${b.east})->.a;
+way["highway"]["name"="Dryden Road"](${b.south},${b.west},${b.north},${b.east})->.b;
+node(w.a)(w.b);
+out;`;
+  const res = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    headers: { 'User-Agent': USER_AGENT, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'data=' + encodeURIComponent(query),
+  });
+  if (!res.ok) throw new Error(`Overpass ${res.status} looking up College Ave & Dryden Rd`);
+  const node = (await res.json()).elements[0];
+  if (!node) throw new Error('Overpass found no College Ave & Dryden Rd intersection');
+  const point = { lat: node.lat, lng: node.lon, display_name: 'College Avenue & Dryden Road, Ithaca, NY' };
+  writeJson(file, point);
+  return point;
+}
+
+async function geocode() {
+  let start = await nominatim(START);
+  if (inside(start, COLLEGETOWN_BOUNDS)) {
+    start = { ...start, name: START, how: 'Nominatim' };
+  } else {
+    console.log(`Nominatim's "${START}" ${start ? `(${start.display_name})` : ''} is not inside Collegetown; using College Ave & Dryden Rd.`);
+    start = { ...(await collegeAndDryden()), name: 'Collegetown (College Ave & Dryden Rd)', how: 'Overpass intersection' };
+  }
+  const end = { ...(await nominatim(END)), name: END, how: 'Nominatim' };
+  const campus = { ...(await nominatim(CENTRAL_CAMPUS)), name: CENTRAL_CAMPUS, how: 'Nominatim' };
+  if (!end.lat || !campus.lat) throw new Error('Nominatim could not find Robert Purcell or Olin Library');
   console.log('Places:');
-  for (const q of PLACES) console.log(`  ${q}: ${cache[q].lat.toFixed(6)}, ${cache[q].lng.toFixed(6)}`);
-  return PLACES.map((q) => cache[q]);
+  for (const p of [start, end, campus]) {
+    console.log(`  ${p.name}: ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}  [${p.how}] ${p.display_name}`);
+  }
+  return { start, end, campus };
 }
 
 // ---------- 2. Bounding box with margin ----------
@@ -319,8 +363,8 @@ function report(edges) {
 // ---------- Main ----------
 
 fs.mkdirSync(RAW, { recursive: true });
-const points = await geocode();
-const bbox = bboxAround(points, MARGIN_M);
+const { start, end, campus } = await geocode();
+const bbox = bboxAround([start, end, campus], MARGIN_M);
 console.log(`Bounding box: S ${bbox.south.toFixed(5)} W ${bbox.west.toFixed(5)} N ${bbox.north.toFixed(5)} E ${bbox.east.toFixed(5)}`);
 const data = await overpass(bbox);
 const woods = woodsPolygons(data.elements);
@@ -330,7 +374,8 @@ console.log(`Found ${woods.length} woods polygons, ${counts.lamps} street lamps,
 
 const out = {
   generated_at: new Date().toISOString(),
-  places: PLACES.map((name, i) => ({ name, lat: points[i].lat, lng: points[i].lng })),
+  // The app's default route: places[0] -> places[1].
+  places: [start, end].map(({ name, lat, lng }) => ({ name, lat, lng })),
   bbox,
   nodes,
   edges: edges.map(({ from, to, coords, length_m, highway, footway, lit, name, surface, lighting, lighting_source, isolated, dist_to_bluelight_m }) => ({

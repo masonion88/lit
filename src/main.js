@@ -389,6 +389,7 @@ map.on('load', () => {
     paint: { 'line-color': colorByLighting, 'line-width': pathWidth, 'line-dasharray': [2, 1.5] },
   });
 
+  // Default route comes from the build script: Collegetown -> Robert Purcell.
   setPoint('start', graph.places[0]);
   setPoint('end', graph.places[1]);
   update({ fit: true });
