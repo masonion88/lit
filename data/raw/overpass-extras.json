@@ -1,0 +1,1065 @@
+{
+  "query": "[out:json][timeout:90];\n(\n  node[\"emergency\"=\"phone\"](42.437446,-76.488127,42.458629,-76.473848);\n  node[\"opening_hours\"][\"name\"](42.437446,-76.488127,42.458629,-76.473848);\n  way[\"opening_hours\"][\"name\"](42.437446,-76.488127,42.458629,-76.473848);\n);\nout center tags;",
+  "fetched_at": "2026-10-09T19:04:51.543Z",
+  "response": {
+    "version": 0.6,
+    "generator": "Overpass API 0.7.62.11 87bfad18",
+    "osm3s": {
+      "timestamp_osm_base": "2026-05-31T22:37:44Z",
+      "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+    },
+    "elements": [
+      {
+        "type": "node",
+        "id": 977202200,
+        "lat": 42.4421961,
+        "lon": -76.4876165,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:country": "US",
+          "addr:housenumber": "424",
+          "addr:interpolation": "even",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Eddy Street",
+          "amenity": "restaurant",
+          "cuisine": "indian",
+          "email": "info@sangamindianrestaurantithaca.com",
+          "fax": "+1-607-319-4513",
+          "name": "Sangam",
+          "opening_hours": "11:30-15:00; 17:00-22:00",
+          "phone": "+1-607-273-1006",
+          "website": "https://sangamindianrestaurantithaca.com/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 977202978,
+        "lat": 42.4422537,
+        "lon": -76.4854725,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:country": "US",
+          "addr:housenumber": "420",
+          "addr:interpolation": "odd",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "College Avenue",
+          "amenity": "fast_food",
+          "cuisine": "bagel",
+          "diet:vegetarian": "yes",
+          "indoor_seating": "yes",
+          "name": "Collegetown Bagels",
+          "opening_hours": "Mo-Su 07:00-21:00",
+          "outdoor_seating": "yes",
+          "phone": "+1-607-273-0982",
+          "toilets:wheelchair": "no",
+          "website": "https://www.collegetownbagels.com/",
+          "wheelchair": "no"
+        }
+      },
+      {
+        "type": "node",
+        "id": 1676946840,
+        "lat": 42.4463624,
+        "lon": -76.4858057,
+        "tags": {
+          "amenity": "cinema",
+          "name": "Cornell Cinema",
+          "opening_hours": "Mo-Fr 09:00-17:00",
+          "wikidata": "Q43039941"
+        }
+      },
+      {
+        "type": "node",
+        "id": 2095832605,
+        "lat": 42.449071,
+        "lon": -76.4833193,
+        "tags": {
+          "amenity": "cafe",
+          "changing_table": "no",
+          "diet:vegetarian": "yes",
+          "name": "Temple of Zeus",
+          "opening_hours": "Mo-Fr 08:00-17:00",
+          "outdoor_seating": "no",
+          "wheelchair": "yes"
+        }
+      },
+      {
+        "type": "node",
+        "id": 2095832657,
+        "lat": 42.4465778,
+        "lon": -76.4857954,
+        "tags": {
+          "amenity": "restaurant",
+          "name": "Okenshields",
+          "opening_hours": "Mo-Fr 11:00-14:30"
+        }
+      },
+      {
+        "type": "node",
+        "id": 2095832671,
+        "lat": 42.4479489,
+        "lon": -76.4846903,
+        "tags": {
+          "air_conditioning": "yes",
+          "amenity": "cafe",
+          "diet:vegan": "yes",
+          "diet:vegetarian": "yes",
+          "indoor_seating": "yes",
+          "internet_access": "yes",
+          "internet_access:fee": "no",
+          "name": "Amit Bhatia Libe Café",
+          "opening_hours": "Mo-Th 08:00-22:00; Fr 08:00-17:00; Sa 10:00-17:00; Su 10:00-22:00",
+          "outdoor_seating": "no",
+          "payment:credit_cards": "yes",
+          "payment:debit_cards": "yes",
+          "wheelchair": "yes"
+        }
+      },
+      {
+        "type": "node",
+        "id": 2095832825,
+        "lat": 42.4465516,
+        "lon": -76.4801359,
+        "tags": {
+          "amenity": "post_office",
+          "brand": "United States Post Office",
+          "brand:wikidata": "Q668687",
+          "name": "United States Post Office",
+          "opening_hours": "Mo-Sa 08:30-17:00",
+          "operator": "United States Postal Service",
+          "operator:short": "USPS",
+          "operator:type": "public",
+          "operator:website": "https://www.usps.com",
+          "operator:wikidata": "Q668687",
+          "operator:wikipedia": "en:United States Postal Service",
+          "short_name": "USPS"
+        }
+      },
+      {
+        "type": "node",
+        "id": 2095834022,
+        "lat": 42.44785,
+        "lon": -76.4794439,
+        "tags": {
+          "amenity": "cafe",
+          "cuisine": "bagel",
+          "diet:vegetarian": "yes",
+          "name": "Bus Stop Bagels",
+          "opening_hours": "Mo-Fr 07:00-15:00",
+          "wheelchair": "yes"
+        }
+      },
+      {
+        "type": "node",
+        "id": 2109379766,
+        "lat": 42.4477673,
+        "lon": -76.4840068,
+        "tags": {
+          "air_conditioning": "yes",
+          "amenity": "library",
+          "internet_access": "wlan",
+          "name": "Kroch Library",
+          "opening_hours": "Mo-Th 08:00-21:00; Fr 08:00-18:00; Sa,Su 10:00-18:00",
+          "operator": "Cornell University",
+          "operator:type": "university",
+          "operator:wikidata": "Q49115",
+          "wheelchair": "yes"
+        }
+      },
+      {
+        "type": "node",
+        "id": 2681142757,
+        "lat": 42.4482892,
+        "lon": -76.4739321,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housename": "CALS Surge",
+          "addr:housenumber": "208",
+          "addr:postcode": "14853",
+          "addr:state": "NY",
+          "addr:street": "Mann Drive",
+          "name": "CALS-HR",
+          "nysgissam:nysaddresspointid": "TOMP056296",
+          "office": "educational_institution",
+          "opening_hours": "Mo-Th 08:30-16:30; Fr 08:30-15:30"
+        }
+      },
+      {
+        "type": "node",
+        "id": 3840051820,
+        "lat": 42.4510624,
+        "lon": -76.4842285,
+        "tags": {
+          "amenity": "restaurant",
+          "cuisine": "vietnamese",
+          "name": "Franny's",
+          "opening_hours": "Mo-Fr 11:00-16:00",
+          "website": "https://scl.cornell.edu/frannys"
+        }
+      },
+      {
+        "type": "node",
+        "id": 4064084954,
+        "lat": 42.4511883,
+        "lon": -76.4830348,
+        "tags": {
+          "alt_name": "Mui Ho Fine Arts Library",
+          "amenity": "library",
+          "internet_access": "yes",
+          "internet_access:fee": "no",
+          "name": "Fine Arts Library",
+          "opening_hours": "Mo-Th 09:00-22:00",
+          "operator": "Cornell University",
+          "operator:type": "university",
+          "operator:wikidata": "Q49115",
+          "website": "https://finearts.library.cornell.edu/",
+          "wheelchair": "yes",
+          "wikidata": "Q19866199",
+          "wikipedia": "en:Cornell Fine Arts Library"
+        }
+      },
+      {
+        "type": "node",
+        "id": 4221840489,
+        "lat": 42.4410938,
+        "lon": -76.4753234,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "143",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Maple Avenue",
+          "amenity": "cafe",
+          "cuisine": "cake;sandwich;fish_and_chips;american;breakfast;coffee_shop;crepe;bagel;diner",
+          "diet:vegan": "yes",
+          "diet:vegetarian": "yes",
+          "internet_access": "wlan",
+          "name": "Coal Yard Cafe",
+          "opening_hours": "Mo-Fr 08:00-15:00; Sa,Su 09:00-15:00",
+          "phone": "+1 607 277 0734",
+          "website": "https://www.thecoalyardcafe.com"
+        }
+      },
+      {
+        "type": "node",
+        "id": 4297020890,
+        "lat": 42.4457552,
+        "lon": -76.4787481,
+        "tags": {
+          "leisure": "fitness_centre",
+          "name": "Teagle Hall",
+          "opening_hours": "Mo-Fr 07:00-19:00; Sa 12:00-17:30; Su 12:00-17:30"
+        }
+      },
+      {
+        "type": "node",
+        "id": 7243574915,
+        "lat": 42.4417399,
+        "lon": -76.485118,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "401",
+          "addr:state": "NY",
+          "addr:street": "College Avenue",
+          "air_conditioning": "yes",
+          "amenity": "restaurant",
+          "cuisine": "japanese",
+          "diet:vegetarian": "yes",
+          "indoor_seating": "yes",
+          "name": "Oishii Bowl",
+          "opening_hours": "Mo-Sa 11:00-21:00; Su 00:00-21:00",
+          "outdoor_seating": "no"
+        }
+      },
+      {
+        "type": "node",
+        "id": 7243574916,
+        "lat": 42.4415134,
+        "lon": -76.4856981,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "159",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Dryden Road",
+          "amenity": "restaurant",
+          "cuisine": "chinese",
+          "email": "xianstreetfoodusa@gmail.com",
+          "name": "Xi'an Street Food",
+          "opening_hours": "12:00-21:00",
+          "phone": "+1-607-219-3211",
+          "website": "https://xianstreetfoodusa.com/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 7564130691,
+        "lat": 42.4406645,
+        "lon": -76.4850513,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "307",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "College Avenue",
+          "name": "GreenStar Natural Foods Market",
+          "opening_hours": "10:00-18:00",
+          "phone": "+1-607-882-2667",
+          "shop": "supermarket",
+          "website": "https://greenstar.coop/collegetown/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 7564130718,
+        "lat": 42.4412195,
+        "lon": -76.4850858,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "319",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "College Avenue",
+          "brand": "Insomnia Cookies",
+          "brand:wikidata": "Q16997024",
+          "cuisine": "cookie",
+          "name": "Insomnia Cookies",
+          "opening_hours": "Mo-We 11:00-24:00; Th-Fr 11:00-01:00; Sa 12:00-01:00; Su 12:00-24:00",
+          "phone": "+1-607-289-2084",
+          "shop": "pastry"
+        }
+      },
+      {
+        "type": "node",
+        "id": 7581419413,
+        "lat": 42.4415043,
+        "lon": -76.485969,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "143",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Dryden Road",
+          "amenity": "cafe",
+          "brand": "Kung Fu Tea",
+          "brand:wikidata": "Q66023886",
+          "cuisine": "bubble_tea",
+          "name": "Kung Fu Tea",
+          "opening_hours": "13:00-20:00",
+          "opening_hours:covid19": "Mo-Su 13:00-20:00",
+          "outdoor_seating": "no",
+          "phone": "+1-607-319-0304",
+          "takeaway": "yes"
+        }
+      },
+      {
+        "type": "node",
+        "id": 8557401130,
+        "lat": 42.442172,
+        "lon": -76.4851322,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "405",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "College Avenue",
+          "amenity": "restaurant",
+          "cuisine": "asian;chinese;japanese",
+          "diet:healthy": "yes",
+          "name": "Fusia Bento Bar",
+          "opening_hours": "Mo-Sa 11:00-22:30; Su 11:30-22:00",
+          "phone": "+1-607-319-4558",
+          "website": "https://www.fusiabento.com/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 8796622633,
+        "lat": 42.442128,
+        "lon": -76.484858,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "409",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "College Avenue",
+          "addr:unit": "403",
+          "brand": "7-Eleven",
+          "brand:wikidata": "Q259340",
+          "name": "7-Eleven",
+          "nysgissam:nysaddresspointid": "TOMP044857",
+          "opening_hours": "24/7",
+          "phone": "+1-607-256-9672",
+          "shop": "convenience",
+          "website": "https://www.7-eleven.com/locations/ny/ithaca/409-college-ave-35255"
+        }
+      },
+      {
+        "type": "node",
+        "id": 8796623425,
+        "lat": 42.4417032,
+        "lon": -76.4856698,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "120",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Dryden Road",
+          "amenity": "restaurant",
+          "name": "Jack's Collegetown Grill",
+          "not:brand:wikidata": "Q6110826",
+          "nysgissam:nysaddresspointid": "TOMP028000",
+          "opening_hours": "Su-We 11:00-23:00; Th-Sa 11:00-02:00",
+          "phone": "+1-607-256-5225",
+          "website": "https://www.jacksgrillithaca.com/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 8796623652,
+        "lat": 42.4419948,
+        "lon": -76.4872992,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "409",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Eddy Street",
+          "amenity": "bar",
+          "email": "hideawayithaca@gmail.com",
+          "name": "Hideaway",
+          "nysgissam:nysaddresspointid": "TOMP012697",
+          "opening_hours": "Tu-Sa 21:00-01:00",
+          "phone": "+1-607-339-0519",
+          "website": "https://www.facebook.com/Hideawayithaca/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 8796632039,
+        "lat": 42.4416345,
+        "lon": -76.4866816,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "111",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Dryden Road",
+          "addr:unit": "5E",
+          "amenity": "restaurant",
+          "cuisine": "mexican",
+          "name": "Old Mexico Express",
+          "nysgissam:nysaddresspointid": "TOMP042173",
+          "opening_hours": "11:00-22:00",
+          "phone": "+1-607-319-5633",
+          "website": "https://oldmexicoexpress.com/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 8796633265,
+        "lat": 42.4419412,
+        "lon": -76.4876132,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "414",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Eddy Street",
+          "addr:unit": "3",
+          "amenity": "restaurant",
+          "brand": "Shi Miao Dao Yunnan Rice Noodle",
+          "brand:en": "Shi Miao Dao Yunnan Rice Noodle",
+          "brand:wikidata": "Q119118794",
+          "brand:zh": "十秒到云南过桥米线",
+          "cuisine": "chinese",
+          "name": "Shi Miao Dao Yunnan Rice Noodle",
+          "name:en": "Shi Miao Dao Yunnan Rice Noodle",
+          "name:zh": "十秒到云南过桥米线",
+          "nysgissam:nysaddresspointid": "TOMP046672",
+          "opening_hours": "Tu-Su 11:30-21:30",
+          "phone": "+1-607-319-0102",
+          "website": "https://www.shimiaodaoithaca.com/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 8796640628,
+        "lat": 42.4417231,
+        "lon": -76.4848633,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "202",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Dryden Road",
+          "amenity": "restaurant",
+          "cuisine": "asian",
+          "name": "BiBiBowl Asian Grill",
+          "nysgissam:nysaddresspointid": "TOMP028214",
+          "opening_hours": "Mo-Sa 11:00-21:30",
+          "phone": "+1-607-319-0188",
+          "website": "https://bibibowlusa.com/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 9167259016,
+        "lat": 42.4418332,
+        "lon": -76.4851139,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:country": "US",
+          "addr:housenumber": "403",
+          "addr:postcode": "14850",
+          "addr:street": "College Avenue",
+          "air_conditioning": "yes",
+          "amenity": "restaurant",
+          "cuisine": "mexican",
+          "delivery": "yes",
+          "diet:vegetarian": "yes",
+          "email": "hello@dosamigosfood.com",
+          "indoor_seating": "yes",
+          "name": "Dos Amigos",
+          "opening_hours": "Tu,We 11:00-22:00; Th-Su 11:00-23:00",
+          "outdoor_seating": "no",
+          "phone": "+1-607-379-5086",
+          "takeaway": "yes",
+          "website": "https://www.dosamigosfood.com/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 9170494592,
+        "lat": 42.4418993,
+        "lon": -76.4853983,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:country": "US",
+          "addr:housenumber": "408",
+          "addr:postcode": "14850",
+          "addr:street": "College Ave",
+          "amenity": "restaurant",
+          "brand": "D.P. Dough",
+          "brand:wikidata": "Q22008973",
+          "cuisine": "calzone",
+          "delivery": "yes",
+          "indoor_seating": "yes",
+          "name": "D.P. Dough",
+          "opening_hours": "Mo-Su 16:00-04:00",
+          "outdoor_seating": "no",
+          "phone": "+1-607-277-7772",
+          "takeaway": "yes",
+          "website": "https://www.dpdough.com/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 9178731303,
+        "lat": 42.4417134,
+        "lon": -76.4845997,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "208A",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Dryden Road",
+          "amenity": "restaurant",
+          "cuisine": "vietnamese",
+          "name": "Pho Time",
+          "opening_hours": "Mo-Th 11:00-22:00; Fr-Sa 11:00-22:30; Su 11:30-22:00",
+          "phone": "+1-607-273-5030",
+          "website": "https://asianchiliphotime.com/photime/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 9178762314,
+        "lat": 42.4417132,
+        "lon": -76.4845543,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "208B",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Dryden Road",
+          "amenity": "restaurant",
+          "cuisine": "asian",
+          "name": "Asian Chili Spot",
+          "opening_hours": "Mo-Th 11:00-22:00; Fr-Sa 11:00-22:30; Su 11:30-22:00",
+          "phone": "+1-607-272-1668",
+          "website": "https://asianchiliphotime.com/home/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 9178783712,
+        "lat": 42.4413874,
+        "lon": -76.4873107,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "315",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Eddy Street",
+          "amenity": "restaurant",
+          "contact:facebook": "https://www.facebook.com/people/Souvlaki-House/100063509023218/",
+          "cuisine": "greek",
+          "name": "Souvlaki House",
+          "opening_hours": "Mo-Sa 11:00-21:00",
+          "phone": "+1-607-273-1650"
+        }
+      },
+      {
+        "type": "node",
+        "id": 9178794925,
+        "lat": 42.4414943,
+        "lon": -76.4865529,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "113",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Dryden Road",
+          "amenity": "restaurant",
+          "cuisine": "japanese",
+          "name": "Plum Tree Restaurant",
+          "opening_hours": "Mo-We 11:15-14:15,16:30-21:45; Th 11:15-14:15,16:30-22:15; Fr 11:15-14:15,16:30-22:45; Sa 11:45-14:45,16:30-22:45; Su 11:45-14:45,16:30-21:45",
+          "phone": "+1-607-256-8212",
+          "website": "https://www.goplumtree.com/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 9179789846,
+        "lat": 42.4415276,
+        "lon": -76.484855,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:country": "US",
+          "addr:housenumber": "205",
+          "addr:postcode": "14850",
+          "addr:street": "Dryden Road",
+          "amenity": "cafe",
+          "cuisine": "bubble_tea",
+          "name": "U Tea",
+          "opening_hours": "Mo-Th,Su 11:30-22:30; Fr-Sa 11:30-23:00",
+          "phone": "+1-607-319-4298"
+        }
+      },
+      {
+        "type": "node",
+        "id": 9179793674,
+        "lat": 42.4421437,
+        "lon": -76.4876103,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:country": "US",
+          "addr:housenumber": "422",
+          "addr:postcode": "14850",
+          "addr:street": "Eddy Street",
+          "amenity": "restaurant",
+          "cuisine": "chinese",
+          "delivery": "yes",
+          "name": "De Tasty Hot Pot",
+          "opening_hours": "Mo,We-Su 11:00-21:30",
+          "phone": "+1-607-821-2312",
+          "takeaway": "yes",
+          "website": "http://www.tastyhotpot.com/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 9179809456,
+        "lat": 42.4417385,
+        "lon": -76.4864325,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:country": "US",
+          "addr:housenumber": "104",
+          "addr:postcode": "14850",
+          "addr:street": "Dryden Road",
+          "amenity": "restaurant",
+          "cuisine": "korean",
+          "delivery": "yes",
+          "name": "Gangnam Station",
+          "opening_hours": "Mo 11:00-20:30; Tu-Su 11:00-21:00",
+          "phone": "+1-607-256-3333",
+          "takeaway": "yes",
+          "website": "https://www.gangnamstationithacany.com/order"
+        }
+      },
+      {
+        "type": "node",
+        "id": 9448536911,
+        "lat": 42.4415092,
+        "lon": -76.486412,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "121",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Dryden Road",
+          "amenity": "fast_food",
+          "cuisine": "wings",
+          "name": "Wings Over Ithaca",
+          "opening_hours": "Mo-Th 11:00-00:00; Fr-Sa 11:00-02:00; Su 11:00-00:00",
+          "phone": "+1 607-319-4664"
+        }
+      },
+      {
+        "type": "node",
+        "id": 10075676849,
+        "lat": 42.4448918,
+        "lon": -76.4811448,
+        "tags": {
+          "air_conditioning": "yes",
+          "amenity": "cafe",
+          "branch": "Gates Hall",
+          "cuisine": "pastry",
+          "indoor_seating": "yes",
+          "internet_access": "wlan",
+          "internet_access:fee": "no",
+          "internet_access:ssid": "Cornell-Visitor",
+          "name": "Gimme Coffee",
+          "opening_hours": "Mo-Fr 08:00-15:00",
+          "outdoor_seating": "yes",
+          "phone": "+1-607-227-5391",
+          "website": "https://www.gimmecoffee.com/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 10082644378,
+        "lat": 42.4466978,
+        "lon": -76.4839008,
+        "tags": {
+          "alt_name": "Big Red Express",
+          "amenity": "post_office",
+          "check_date": "2026-04-26",
+          "collection_times": "Mo-Fr 15:00",
+          "name": "USPS - CPU Cornell Store",
+          "opening_hours": "Mo-Fr 8:30-15:30",
+          "operator": "United States Postal Service",
+          "operator:short": "USPS",
+          "operator:type": "public",
+          "operator:website": "https://www.usps.com",
+          "operator:wikidata": "Q668687",
+          "operator:wikipedia": "en:United States Postal Service",
+          "post_office:brand": "USPS",
+          "wheelchair": "yes"
+        }
+      },
+      {
+        "type": "node",
+        "id": 10573743829,
+        "lat": 42.4477302,
+        "lon": -76.4845835,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:state": "NY",
+          "air_conditioning": "yes",
+          "amenity": "library",
+          "internet_access": "wlan",
+          "internet_access:fee": "customers",
+          "name": "Olin Library",
+          "opening_hours": "Mo-Th 08:00-21:00; Fr 08:00-18:00; Sa,Su 10:00-18:00",
+          "operator": "Cornell University",
+          "operator:type": "university",
+          "operator:wikidata": "Q49115",
+          "wheelchair": "yes",
+          "wikidata": "Q107183436",
+          "wikimedia_commons": "Category:Olin Library (Cornell University)"
+        }
+      },
+      {
+        "type": "node",
+        "id": 12008684084,
+        "lat": 42.4465286,
+        "lon": -76.4821629,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "130",
+          "addr:postcode": "14853",
+          "addr:state": "NY",
+          "addr:street": "Statler Drive",
+          "amenity": "restaurant",
+          "cuisine": "italian",
+          "diet:vegetarian": "yes",
+          "email": "ha-tavernabanfi@cornell.edu",
+          "name": "Taverna Banfi",
+          "opening_hours": "Mo-Fr 07:30-10:00,11:30-14:00; Mo-Su 17:30-21:00; Sa-Su 07:00-14:00",
+          "phone": "+1-607-254-2565",
+          "website": "https://statlerhotel.cornell.edu/food-drink/taverna-banfi"
+        }
+      },
+      {
+        "type": "node",
+        "id": 12016026390,
+        "lat": 42.4462673,
+        "lon": -76.4820178,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "130",
+          "addr:postcode": "14853",
+          "addr:state": "NY",
+          "addr:street": "Statler Drive",
+          "amenity": "restaurant",
+          "diet:vegetarian": "yes",
+          "email": "macs_terrace@cornell.edu",
+          "name": "The Terrace Restaurant",
+          "opening_hours": "Mo-Fr 08:00-14:30",
+          "phone": "+1-607-254-2511",
+          "website": "https://statlerhotel.cornell.edu/food-drink/the-terrace-restaurant"
+        }
+      },
+      {
+        "type": "node",
+        "id": 12065631231,
+        "lat": 42.4449635,
+        "lon": -76.4857837,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "548",
+          "addr:postcode": "14853",
+          "addr:state": "NY",
+          "addr:street": "College Avenue",
+          "email": "anabelgrocery@gmail.com",
+          "name": "Anabel's Grocery",
+          "opening_hours": "We-Fr 12:00-19:00; Sa 12:00-15:00",
+          "operator": "Cornell University",
+          "phone": "+1-607-255-1441",
+          "shop": "supermarket",
+          "website": "https://www.anabelsgrocery.org/"
+        }
+      },
+      {
+        "type": "node",
+        "id": 12065676277,
+        "lat": 42.4417145,
+        "lon": -76.4846405,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "206B",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Dryden Road",
+          "amenity": "restaurant",
+          "branch": "Collegetown",
+          "cuisine": "poke",
+          "name": "Pokelava",
+          "opening_hours": "Mo-Th,Su 11:00-21:00; Fr-Sa 11:00-21:30",
+          "phone": "+1-607-339-0322"
+        }
+      },
+      {
+        "type": "node",
+        "id": 13295442572,
+        "lat": 42.4478109,
+        "lon": -76.4835721,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "204",
+          "addr:postcode": "14853",
+          "addr:state": "NY",
+          "addr:street": "Feeney Way",
+          "amenity": "community_centre",
+          "community_centre": "meeting_room",
+          "name": "Language Resource Center",
+          "opening_hours": "Mo-Th 09:00-20:00; Fr 09:00-16:00; Su 15:00-18:00",
+          "operator": "Cornell University"
+        }
+      },
+      {
+        "type": "node",
+        "id": 13376617901,
+        "lat": 42.4516435,
+        "lon": -76.4860651,
+        "tags": {
+          "emergency": "phone"
+        }
+      },
+      {
+        "type": "node",
+        "id": 13376618001,
+        "lat": 42.4524588,
+        "lon": -76.4860509,
+        "tags": {
+          "emergency": "phone"
+        }
+      },
+      {
+        "type": "node",
+        "id": 13604617431,
+        "lat": 42.440684,
+        "lon": -76.4850366,
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "307",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "College Avenue",
+          "addr:unit": "Ste 1",
+          "amenity": "cafe",
+          "cuisine": "coffee_shop",
+          "internet_access": "wlan",
+          "internet_access:fee": "customers",
+          "name": "Forty Weight Coffee Roasters",
+          "opening_hours": "Mo-Fr 07:30-18:00 Sa-Su 09:00-18:00",
+          "website": "https://www.instagram.com/fortyweight_cafe/",
+          "website:menu": "fortyweightcoffee.cafe"
+        }
+      },
+      {
+        "type": "way",
+        "id": 35067735,
+        "center": {
+          "lat": 42.4488337,
+          "lon": -76.4760757
+        },
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "237",
+          "addr:postcode": "14853",
+          "addr:state": "NY",
+          "addr:street": "Mann Drive",
+          "air_conditioning": "yes",
+          "amenity": "library",
+          "baby_feeding": "room",
+          "building": "university",
+          "building:levels": "4",
+          "ele": "275",
+          "gnis:feature_id": "2433561",
+          "internet_access": "yes",
+          "internet_access:fee": "no",
+          "name": "Mann Library",
+          "opening_hours": "Mo-Fr 08:00-17:00; Sa 12:00-17:00",
+          "operator": "Cornell University",
+          "operator:type": "university",
+          "operator:wikidata": "Q49115",
+          "source": "USGS Geonames",
+          "toilets": "yes",
+          "website": "https://mannlib.cornell.edu/",
+          "wheelchair": "yes",
+          "wikimedia_commons": "Category:Mann Library (Cornell University)"
+        }
+      },
+      {
+        "type": "way",
+        "id": 199734708,
+        "center": {
+          "lat": 42.4467321,
+          "lon": -76.4842288
+        },
+        "tags": {
+          "building": "retail",
+          "check_date": "2026-04-26",
+          "location": "underground",
+          "name": "The Cornell Store",
+          "opening_hours": "Mo-Fr 8:30-18:00; Sa 10:00-17:00",
+          "payment:credit_cards": "yes",
+          "payment:debit_cards": "yes",
+          "shop": "books",
+          "wheelchair": "yes"
+        }
+      },
+      {
+        "type": "way",
+        "id": 310881325,
+        "center": {
+          "lat": 42.4465661,
+          "lon": -76.485654
+        },
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "136",
+          "addr:postcode": "14850",
+          "addr:state": "NY",
+          "addr:street": "Ho Plaza",
+          "alt_name": "The Straight",
+          "amenity": "community_centre",
+          "building": "university",
+          "building:levels": "3",
+          "ele": "236",
+          "gnis:feature_id": "2433621",
+          "name": "Willard Straight Hall",
+          "opening_hours": "Mo-Su 07:00-23:00",
+          "operator": "Cornell University",
+          "source": "USGS Geonames",
+          "wikidata": "Q8003494",
+          "wikimedia_commons": "Category:Willard Straight Hall (Cornell University)",
+          "wikipedia": "en:Willard Straight Hall"
+        }
+      },
+      {
+        "type": "way",
+        "id": 321746495,
+        "center": {
+          "lat": 42.4477492,
+          "lon": -76.4852864
+        },
+        "tags": {
+          "addr:state": "NY",
+          "air_conditioning": "yes",
+          "amenity": "library",
+          "building": "university",
+          "ele": "241",
+          "gnis:feature_id": "2433634",
+          "name": "Uris Library",
+          "opening_hours": "Mo-Fr 08:00-17:00; Sa 12:00-17:00",
+          "operator": "Cornell University",
+          "operator:type": "university",
+          "operator:wikidata": "Q49115",
+          "source": "USGS Geonames",
+          "wikidata": "Q108937984",
+          "wikimedia_commons": "Category:Uris Library (Cornell University)"
+        }
+      },
+      {
+        "type": "way",
+        "id": 380682378,
+        "center": {
+          "lat": 42.4456524,
+          "lon": -76.4857225
+        },
+        "tags": {
+          "addr:city": "Ithaca",
+          "addr:housenumber": "110",
+          "addr:postcode": "14853",
+          "addr:state": "NY",
+          "addr:street": "Ho Plaza",
+          "amenity": "clinic",
+          "architect": "Conway L Todd;Robert Macon",
+          "building": "university",
+          "ele": "233",
+          "fax": "+1-607-255-0269",
+          "gnis:feature_id": "2433620",
+          "healthcare": "clinic",
+          "name": "Cornell Health",
+          "old_name": "Gannett Health Center",
+          "opening_hours": "Mo-Tu,Th-Fr 09:00-12:00; Mo-Tu,Th-Fr 13:00-16:30; We 10:30-12:00; We 13:00-16:30",
+          "operator": "Cornell University",
+          "operator:type": "university",
+          "phone": "+1-607-255-5155",
+          "website": "https://health.cornell.edu/",
+          "wheelchair": "yes"
+        }
+      },
+      {
+        "type": "way",
+        "id": 556029792,
+        "center": {
+          "lat": 42.4494946,
+          "lon": -76.4724217
+        },
+        "tags": {
+          "leisure": "park",
+          "name": "Cornell Botanic Gardens",
+          "opening_hours": "Mo-Su 07:30-17:00"
+        }
+      }
+    ]
+  }
+}

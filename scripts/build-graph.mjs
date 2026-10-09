@@ -24,6 +24,9 @@ const WALKABLE = [
   'unclassified', 'tertiary', 'secondary', 'primary', 'track', 'cycleway',
 ];
 
+// The main Overpass server is sometimes "too busy", so fall back to a mirror.
+const OVERPASS_SERVERS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const readJson = (file) => (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null);
 const writeJson = (file, data) => fs.writeFileSync(file, JSON.stringify(data, null, 2));
@@ -53,6 +56,28 @@ async function nominatim(q) {
   return cache[q];
 }
 
+// Runs one Overpass query, trying each server in turn. A busy server answers with an
+// HTML error page instead of JSON, so a failed JSON parse also moves on to the next one.
+async function overpassFetch(query) {
+  const errors = [];
+  for (const url of OVERPASS_SERVERS) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'User-Agent': USER_AGENT, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'data=' + encodeURIComponent(query),
+      });
+      const text = await res.text();
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+      return JSON.parse(text);
+    } catch (err) {
+      console.log(`Overpass at ${url} failed (${err.message.slice(0, 120)}), trying the next server...`);
+      errors.push(`${url}: ${err.message.slice(0, 200)}`);
+    }
+  }
+  throw new Error('Every Overpass server failed:\n' + errors.join('\n'));
+}
+
 const inside = (p, b) => p && p.lat >= b.south && p.lat <= b.north && p.lng >= b.west && p.lng <= b.east;
 
 // Fallback for Collegetown: the node where College Avenue meets Dryden Road (Overpass, cached).
@@ -66,13 +91,7 @@ way["highway"]["name"="College Avenue"](${b.south},${b.west},${b.north},${b.east
 way["highway"]["name"="Dryden Road"](${b.south},${b.west},${b.north},${b.east})->.b;
 node(w.a)(w.b);
 out;`;
-  const res = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    headers: { 'User-Agent': USER_AGENT, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'data=' + encodeURIComponent(query),
-  });
-  if (!res.ok) throw new Error(`Overpass ${res.status} looking up College Ave & Dryden Rd`);
-  const node = (await res.json()).elements[0];
+  const node = (await overpassFetch(query)).elements[0];
   if (!node) throw new Error('Overpass found no College Ave & Dryden Rd intersection');
   const point = { lat: node.lat, lng: node.lon, display_name: 'College Avenue & Dryden Road, Ithaca, NY' };
   writeJson(file, point);
@@ -135,16 +154,80 @@ out body geom;`;
     return cached.response;
   }
   console.log('Overpass: downloading (this can take a minute)...');
-  const res = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    headers: { 'User-Agent': USER_AGENT, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'data=' + encodeURIComponent(query),
-  });
-  if (!res.ok) throw new Error(`Overpass ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  const response = await res.json();
+  const response = await overpassFetch(query);
   writeJson(file, { query, fetched_at: new Date().toISOString(), response });
   return response;
 }
+
+// A second, small query for emergency phones and places with opening hours. It has its own
+// cache file so changing it never forces the big path download above to run again.
+async function overpassExtras(bbox) {
+  const b = [bbox.south, bbox.west, bbox.north, bbox.east].map((n) => n.toFixed(6)).join(',');
+  const query = `[out:json][timeout:90];
+(
+  node["emergency"="phone"](${b});
+  node["opening_hours"]["name"](${b});
+  way["opening_hours"]["name"](${b});
+);
+out center tags;`;
+
+  const file = path.join(RAW, 'overpass-extras.json');
+  const cached = readJson(file);
+  if (cached && cached.query === query) {
+    console.log('Overpass extras: using cached data/raw/overpass-extras.json');
+    return cached.response;
+  }
+  console.log('Overpass extras: downloading emergency phones and opening hours...');
+  const response = await overpassFetch(query);
+  writeJson(file, { query, fetched_at: new Date().toISOString(), response });
+  return response;
+}
+
+// ---------- Opening hours (OSM's opening_hours text) ----------
+
+const DAY_CODES = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+const HHMM = /^\d{1,2}:\d{2}$/;
+
+// "Mo-We,Fr" -> ['mon', 'tue', 'wed', 'fri']. Ranges can wrap ("Su-We"). null if unreadable.
+function expandDays(spec) {
+  const out = new Set();
+  for (const part of spec.split(',')) {
+    const [a, b] = part.split('-').map((code) => DAY_CODES.indexOf(code));
+    if (a < 0 || b === -1) return null;
+    if (b === undefined) { out.add(DAY_KEYS[a]); continue; }
+    for (let i = a; ; i = (i + 1) % 7) {
+      out.add(DAY_KEYS[i]);
+      if (i === b) break;
+    }
+  }
+  return [...out];
+}
+
+// Reads the common forms: "24/7", "11:00-22:00", "Mo-Fr 08:00-17:00; Sa,Su 10:00-18:00",
+// "Mo-We 11:15-14:15,16:30-21:45". Returns { mon: [['08:00', '17:00']], ..., sun: null },
+// or null for anything else (holidays, "off", months, sunset...), so we never guess.
+function parseOpeningHours(text) {
+  const s = text.trim();
+  if (s === '24/7') return Object.fromEntries(DAY_KEYS.map((d) => [d, [['00:00', '24:00']]]));
+  const hours = Object.fromEntries(DAY_KEYS.map((d) => [d, null]));
+  for (const rule of s.split(';').map((r) => r.trim()).filter(Boolean)) {
+    const m = /^([A-Z][a-z](?:[-,][A-Z][a-z])*)?\s*(.+)$/.exec(rule);
+    if (!m) return null;
+    const spans = m[2].split(',').map((t) => /^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/.exec(t.trim()));
+    if (spans.some((x) => !x || toMinutes(x[1]) > 1440 || toMinutes(x[2]) > 1440)) return null;
+    const days = m[1] ? expandDays(m[1]) : DAY_KEYS;
+    if (!days) return null;
+    // As in the OSM spec, a later rule replaces an earlier one for the same day.
+    for (const d of days) hours[d] = spans.map((x) => [x[1].padStart(5, '0'), x[2].padStart(5, '0')]);
+  }
+  return hours;
+}
+
+const toMinutes = (hhmm) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+};
 
 // ---------- Woods polygons (ways + multipolygon relations) ----------
 
@@ -297,16 +380,28 @@ function edgeNear(edge, pt, meters) {
   return turf.pointToLineDistance(turf.point(pt), turf.lineString(edge.coords), { units: 'meters' }) <= meters;
 }
 
-function annotate(edges, elements, woods) {
+// Blue Light phones: our own list in data/bluelights.csv plus OSM's emergency=phone nodes.
+// An OSM phone within 15 m of one already in the CSV is the same phone, so it's skipped.
+function blueLights(extras) {
+  const list = readCsv(path.join(ROOT, 'data', 'bluelights.csv'))
+    .map((r) => ({ name: r.name || 'Blue Light', lat: Number(r.lat), lng: Number(r.lng), source: 'csv' }))
+    .filter((b) => Number.isFinite(b.lat) && Number.isFinite(b.lng));
+  for (const el of extras.elements) {
+    if (el.type !== 'node' || el.tags?.emergency !== 'phone') continue;
+    const dup = list.some((b) => turf.distance([b.lng, b.lat], [el.lon, el.lat], { units: 'meters' }) < 15);
+    if (!dup) list.push({ name: el.tags.name || 'Emergency phone', lat: round6(el.lat), lng: round6(el.lon), source: 'osm' });
+  }
+  return list;
+}
+
+function annotate(edges, elements, woods, blueLightList) {
   const verified = readCsv(path.join(ROOT, 'data', 'verified_lighting.csv'))
     .map((r) => ({ pt: [Number(r.lng), Number(r.lat)], status: r.status }))
     .filter((r) => Number.isFinite(r.pt[0]) && Number.isFinite(r.pt[1]) && r.status);
   const lamps = elements
     .filter((el) => el.type === 'node' && el.tags?.highway === 'street_lamp')
     .map((el) => [el.lon, el.lat]);
-  const bluelights = readCsv(path.join(ROOT, 'data', 'bluelights.csv'))
-    .map((r) => [Number(r.lng), Number(r.lat)])
-    .filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y));
+  const bluelights = blueLightList.map((b) => [b.lng, b.lat]);
 
   for (const e of edges) {
     const line = turf.lineString(e.coords);
@@ -367,9 +462,11 @@ const { start, end, campus } = await geocode();
 const bbox = bboxAround([start, end, campus], MARGIN_M);
 console.log(`Bounding box: S ${bbox.south.toFixed(5)} W ${bbox.west.toFixed(5)} N ${bbox.north.toFixed(5)} E ${bbox.east.toFixed(5)}`);
 const data = await overpass(bbox);
+const extras = await overpassExtras(bbox);
 const woods = woodsPolygons(data.elements);
 const { nodes, edges } = buildGraph(data.elements);
-const counts = annotate(edges, data.elements, woods);
+const bluelightList = blueLights(extras);
+const counts = annotate(edges, data.elements, woods, bluelightList);
 console.log(`Found ${woods.length} woods polygons, ${counts.lamps} street lamps, ${counts.verified} verified points, ${counts.bluelights} Blue Lights`);
 
 const out = {
@@ -377,6 +474,7 @@ const out = {
   // The app's default route: places[0] -> places[1].
   places: [start, end].map(({ name, lat, lng }) => ({ name, lat, lng })),
   bbox,
+  bluelights: bluelightList,
   nodes,
   edges: edges.map(({ from, to, coords, length_m, highway, footway, lit, name, surface, lighting, lighting_source, isolated, dist_to_bluelight_m }) => ({
     from, to, coords, length_m, highway, footway, lit, name, surface, lighting, lighting_source, isolated, dist_to_bluelight_m,
@@ -387,11 +485,10 @@ console.log(`Wrote public/graph.json (${nodes.length} nodes, ${edges.length} edg
 
 // ---------- Building hours for the app's clock slider ----------
 
-// hours.mon = ['07:30', '02:00'] means open 7:30 am Monday until 2 am Tuesday. null = closed.
-const HHMM = /^\d{1,2}:\d{2}$/;
-const buildingRows = readCsv(path.join(ROOT, 'data', 'buildings.csv'));
+// hours.mon = [['11:00', '14:00'], ['17:00', '02:00']] means open 11-2 and again from 5 pm
+// Monday until 2 am Tuesday. null = closed that day.
 const buildings = [];
-for (const r of buildingRows) {
+for (const r of readCsv(path.join(ROOT, 'data', 'buildings.csv'))) {
   const lat = Number(r.lat);
   const lng = Number(r.lng);
   if (!r.name || !Number.isFinite(lat) || !Number.isFinite(lng)) {
@@ -399,17 +496,34 @@ for (const r of buildingRows) {
     continue;
   }
   const hours = {};
-  for (const d of ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']) {
+  for (const d of DAY_KEYS) {
     const open = r[`${d}_open`];
     const close = r[`${d}_close`];
-    if (HHMM.test(open ?? '') && HHMM.test(close ?? '')) hours[d] = [open, close];
+    if (HHMM.test(open ?? '') && HHMM.test(close ?? '')) hours[d] = [[open, close]];
     else {
       if (open || close) console.warn(`buildings.csv: ${r.name} ${d} hours "${open}"-"${close}" aren't HH:MM, treating as closed`);
       hours[d] = null;
     }
   }
-  buildings.push({ name: r.name, lat, lng, hours });
+  buildings.push({ name: r.name, lat, lng, hours, kind: null, hours_text: null, source: 'csv' });
+}
+
+// Then every OSM place with readable opening_hours, unless buildings.csv already has that name.
+// Parks and gardens are skipped: their center point isn't a door you can walk into.
+let unreadable = 0;
+for (const el of extras.elements) {
+  const t = el.tags ?? {};
+  if (!t.opening_hours || !t.name) continue;
+  const kind = t.amenity || t.shop || t.office || t.healthcare || t.craft || (t.building && 'building');
+  if (!kind || t.leisure || t.public_transport) continue;
+  if (buildings.some((b) => b.name.toLowerCase() === t.name.toLowerCase())) continue;
+  const hours = parseOpeningHours(t.opening_hours);
+  if (!hours) { unreadable++; continue; }
+  const lat = el.lat ?? el.center?.lat;
+  const lng = el.lon ?? el.center?.lon;
+  buildings.push({ name: t.name, lat: round6(lat), lng: round6(lng), hours, kind, hours_text: t.opening_hours, source: 'osm' });
 }
 fs.writeFileSync(path.join(ROOT, 'public', 'buildings.json'), JSON.stringify(buildings, null, 2));
-console.log(`Wrote public/buildings.json (${buildings.length} buildings)`);
+const fromCsv = buildings.filter((b) => b.source === 'csv').length;
+console.log(`Wrote public/buildings.json (${buildings.length} places: ${fromCsv} from buildings.csv, ${buildings.length - fromCsv} from OSM; skipped ${unreadable} OSM places with hours we can't read)`);
 report(edges);

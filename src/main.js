@@ -188,16 +188,16 @@ const toMin = (hhmm) => {
   return m ? Number(m[1]) * 60 + Number(m[2]) : null;
 };
 
-// Open if inside today's hours, or inside yesterday's hours that ran past midnight.
+// Each day holds a list of [open, close] periods. Open if inside one of today's periods,
+// or inside one of yesterday's that ran past midnight.
 function isOpen(b, date) {
   const now = date.getHours() * 60 + date.getMinutes();
-  const [o, c] = (b.hours[DAYS[date.getDay()]] ?? []).map(toMin);
-  if (o != null && c != null) {
-    if (c > o && now >= o && now < c) return true;
-    if (c <= o && now >= o) return true;
-  }
-  const [yo, yc] = (b.hours[DAYS[(date.getDay() + 6) % 7]] ?? []).map(toMin);
-  return yo != null && yc != null && yc <= yo && now < yc;
+  const today = (b.hours[DAYS[date.getDay()]] ?? []).map((p) => p.map(toMin));
+  const yesterday = (b.hours[DAYS[(date.getDay() + 6) % 7]] ?? []).map((p) => p.map(toMin));
+  return (
+    today.some(([o, c]) => (c > o ? now >= o && now < c : now >= o)) ||
+    yesterday.some(([o, c]) => c <= o && now < c)
+  );
 }
 
 // The night a time belongs to starts at 6 pm; times before 5 am belong to the previous evening.
