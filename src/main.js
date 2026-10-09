@@ -18,7 +18,12 @@ const CONFIG = {
     nearOpenBuilding: 0.9,
   },
   blueLightFarM: 150,
+  // With only a handful of phones mapped, "far from a Blue Light" would just pull the Lit
+  // route toward whichever few happen to be mapped. Below this count it's shown, not used.
+  blueLightMinForRouting: 10,
   buildingNearM: 30,
+  // The "walk with a friend" card only shows for a dark stretch at least this long.
+  friendMinStretchM: 100,
   // Clock slider: minutes after 6 pm (0 = 6 pm, 600 = 4 am).
   clock: { startHour: 18, maxMin: 600, stepMin: 15 },
   // Late-night TCAT window from Cornell's student safety page, as minutes after midnight.
@@ -41,6 +46,7 @@ const COLORS = {
   unknown: '#8b8f98',
   fastest: '#38bdf8',
   litRoute: '#f472b6',
+  blueLight: '#3b82f6',
   open: '#4ade80',
   closed: '#4b5563',
 };
@@ -94,6 +100,8 @@ document.querySelector('#app').innerHTML = `
       <h2>Data honesty</h2>
       <p class="fine">Path segments by where their lighting value comes from:</p>
       <dl id="source-counts" class="stats"></dl>
+      <p class="fine">Other map data:</p>
+      <dl id="other-counts" class="stats"></dl>
       <p class="no-crime">No crime data, by design.</p>
     </section>
 
@@ -108,8 +116,9 @@ document.querySelector('#app').innerHTML = `
         <li><i class="sw route" style="background:${COLORS.fastest}"></i>Fastest route</li>
         <li><i class="sw route" style="background:${COLORS.litRoute}"></i>Lit route</li>
         <li><i class="sw route stretch"></i>Lit route's longest dark or unknown stretch</li>
-        <li><i class="bdot" style="background:${COLORS.open}"></i>Building open at the chosen time</li>
-        <li><i class="bdot" style="background:${COLORS.closed}"></i>Building closed</li>
+        <li><i class="bdot" style="background:${COLORS.blueLight}"></i>Blue Light emergency phone (only mapped ones)</li>
+        <li><i class="bdot" style="background:${COLORS.open}"></i>Place open at the chosen time</li>
+        <li><i class="bdot" style="background:${COLORS.closed}"></i>Place closed</li>
       </ul>
       <p class="label">Every lighting value has a source:</p>
       <dl class="sources">
@@ -140,6 +149,16 @@ for (const e of edges) sourceCounts[e.lighting_source] = (sourceCounts[e.lightin
 document.querySelector('#source-counts').innerHTML = Object.entries(sourceCounts)
   .map(([s, n]) => `<dt>${s}</dt><dd>${n.toLocaleString()} <small>(${Math.round((n / edges.length) * 100)}%)</small></dd>`)
   .join('');
+const blueLights = graph.bluelights ?? [];
+const useBlueLights = blueLights.length >= CONFIG.blueLightMinForRouting;
+const countBy = (list, key) => list.reduce((m, x) => ({ ...m, [x[key]]: (m[x[key]] ?? 0) + 1 }), {});
+const blueBy = countBy(blueLights, 'source');
+const placesBy = countBy(buildings, 'source');
+document.querySelector('#other-counts').innerHTML = `
+  <dt>Blue Lights</dt><dd>${blueLights.length} <small>(${blueBy.osm ?? 0} OpenStreetMap, ${blueBy.csv ?? 0} our list)${
+    useBlueLights ? '' : ' · too few to steer routes'
+  }</small></dd>
+  <dt>Places with hours</dt><dd>${buildings.length} <small>(${placesBy.osm ?? 0} OpenStreetMap, ${placesBy.csv ?? 0} our list)</small></dd>`;
 const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
 // Neighbor list: node id -> [{ to, edge index }]. Paths are walkable both ways.
@@ -300,7 +319,7 @@ function litCost(i, ctx) {
   const m = CONFIG.night;
   t *= m.lighting[e.lighting] ?? 1;
   if (e.isolated) t *= m.isolated;
-  if (e.dist_to_bluelight_m != null && e.dist_to_bluelight_m > CONFIG.blueLightFarM) t *= m.farFromBlueLight;
+  if (useBlueLights && e.dist_to_bluelight_m != null && e.dist_to_bluelight_m > CONFIG.blueLightFarM) t *= m.farFromBlueLight;
   if (ctx.openNear[i]) t *= m.nearOpenBuilding;
   return t;
 }
@@ -424,6 +443,17 @@ map.on('load', () => {
   map.addSource('route-lit', { type: 'geojson', data: emptyLine });
   map.addSource('paths', { type: 'geojson', data: pathsGeojson });
   map.addSource('buildings', { type: 'geojson', data: buildingsGeojson(new Date()) });
+  map.addSource('bluelights', {
+    type: 'geojson',
+    data: {
+      type: 'FeatureCollection',
+      features: blueLights.map((b) => ({
+        type: 'Feature',
+        properties: { name: b.name, source: b.source },
+        geometry: { type: 'Point', coordinates: [b.lng, b.lat] },
+      })),
+    },
+  });
 
   // The Lit route's longest dark-or-unknown stretch: a white glow under everything.
   map.addLayer({
@@ -469,6 +499,18 @@ map.on('load', () => {
       'circle-color': ['case', ['get', 'open'], COLORS.open, COLORS.closed],
       'circle-radius': ['case', ['get', 'open'], 7, 5],
       'circle-stroke-color': '#111318',
+      'circle-stroke-width': 2,
+    },
+  });
+
+  map.addLayer({
+    id: 'bluelights',
+    type: 'circle',
+    source: 'bluelights',
+    paint: {
+      'circle-color': COLORS.blueLight,
+      'circle-radius': 7,
+      'circle-stroke-color': '#ffffff',
       'circle-stroke-width': 2,
     },
   });
@@ -586,7 +628,7 @@ function update({ fit = false } = {}) {
 
 // Shows the friend card at the middle of the stretch after dark; hides it otherwise.
 function showFriendCard(x) {
-  const coords = x && x.longestStretch > 0 ? routeCoords(x.longestSteps) : [];
+  const coords = x && x.longestStretch >= CONFIG.friendMinStretchM ? routeCoords(x.longestSteps) : [];
   map.getSource('stretch').setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } });
   if (coords.length < 2 || friendDismissed) {
     hideFriend();
@@ -616,7 +658,9 @@ function lateBusCard() {
 function card(name, color, x, base) {
   const extra = x.minutes - base.minutes;
   const extraText = name === 'Fastest' ? '—' : `${extra >= 0.05 ? '+' : ''}${extra.toFixed(1)} min`;
-  const blue = x.maxBlue == null ? 'no data' : `${x.maxBlue} m`;
+  const blue = x.maxBlue == null
+    ? 'no data'
+    : `${x.maxBlue} m${useBlueLights ? '' : ` <small>(only ${blueLights.length} mapped)</small>`}`;
   const open = x.open.length ? x.open.join(', ') : 'none';
   return `
     <section class="card" style="--accent:${color}">
@@ -626,8 +670,8 @@ function card(name, color, x, base) {
         <dt>Extra vs. Fastest</dt><dd>${extraText}</dd>
         <dt>Length lit</dt><dd>${Math.round(x.litPct)}% <small>(${Math.round(x.litConfirmedPct)}% from mapped data, rest estimated)</small></dd>
         <dt>Longest dark or unknown stretch</dt><dd>${Math.round(x.longestStretch)} m</dd>
-        <dt>Max distance to a Blue Light</dt><dd>${blue}</dd>
-        <dt>Open buildings passed</dt><dd>${open}</dd>
+        <dt>Max distance to a mapped Blue Light</dt><dd>${blue}</dd>
+        <dt>Open places passed</dt><dd>${open}</dd>
       </dl>
     </section>`;
 }
