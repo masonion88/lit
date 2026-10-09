@@ -35,6 +35,13 @@ const LINKS = {
   studentSafety: 'https://scl.cornell.edu/families/cornell-family-resource-hub/student-safety-and-support',
 };
 const SOURCES = ['verified', 'osm', 'mapillary', 'estimated', 'unknown'];
+const SOURCE_TEXT = {
+  verified: 'Checked in person after dark by our team.',
+  osm: "OpenStreetMap: a path's <code>lit</code> tag, or a mapped street lamp within 25 m.",
+  mapillary: 'Seen in Mapillary street-level night photos.',
+  estimated: 'Our guess from the path type and nearby woods. Treat with care.',
+  unknown: 'No information at all.',
+};
 
 const COLORS = {
   lit: '#ffd60a',
@@ -69,10 +76,11 @@ document.querySelector('#app').innerHTML = `
     </header>
 
     <div class="row">
-      <span class="label">Tap map to set</span>
+      <span class="label">Tap map to</span>
       <div class="seg">
         <button id="pick-start" class="active"><i class="dot start"></i>Start</button>
         <button id="pick-end"><i class="dot end"></i>End</button>
+        <button id="pick-inspect" title="Tap a path or dot to see where its data comes from">Inspect</button>
       </div>
     </div>
 
@@ -122,11 +130,7 @@ document.querySelector('#app').innerHTML = `
       </ul>
       <p class="label">Every lighting value has a source:</p>
       <dl class="sources">
-        <dt>verified</dt><dd>Checked in person after dark by our team.</dd>
-        <dt>osm</dt><dd>OpenStreetMap: a path's <code>lit</code> tag, or a mapped street lamp within 25 m.</dd>
-        <dt>mapillary</dt><dd>Seen in Mapillary street-level night photos.</dd>
-        <dt>estimated</dt><dd>Our guess from the path type and nearby woods. Treat with care.</dd>
-        <dt>unknown</dt><dd>No information at all.</dd>
+        ${SOURCES.map((src) => `<dt>${src}</dt><dd>${SOURCE_TEXT[src]}</dd>`).join('')}
       </dl>
       <p class="fine">Multipliers apply only between sunset and sunrise. This app shows tradeoffs in the physical environment. It does not use crime data and cannot tell you a route is risk-free.</p>
     </details>
@@ -400,9 +404,9 @@ map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-ri
 
 const pathsGeojson = {
   type: 'FeatureCollection',
-  features: edges.map((e) => ({
+  features: edges.map((e, i) => ({
     type: 'Feature',
-    properties: { lighting: e.lighting },
+    properties: { lighting: e.lighting, i },
     geometry: { type: 'LineString', coordinates: e.coords },
   })),
 };
@@ -522,6 +526,10 @@ map.on('load', () => {
 });
 
 map.on('click', (ev) => {
+  if (state.picking === 'inspect') {
+    inspect(ev);
+    return;
+  }
   setPoint(state.picking, { lat: ev.lngLat.lat, lng: ev.lngLat.lng });
   setPicking(state.picking === 'start' ? 'end' : 'start');
   friendDismissed = false;
@@ -576,9 +584,13 @@ function setPicking(which) {
   state.picking = which;
   $('#pick-start').classList.toggle('active', which === 'start');
   $('#pick-end').classList.toggle('active', which === 'end');
+  $('#pick-inspect').classList.toggle('active', which === 'inspect');
+  map.getCanvas().style.cursor = which === 'inspect' ? 'help' : '';
+  if (which !== 'inspect') inspectPopup.remove();
 }
 $('#pick-start').addEventListener('click', () => setPicking('start'));
 $('#pick-end').addEventListener('click', () => setPicking('end'));
+$('#pick-inspect').addEventListener('click', () => setPicking('inspect'));
 
 // ---------- Recompute everything ----------
 
@@ -674,4 +686,95 @@ function card(name, color, x, base) {
         <dt>Open places passed</dt><dd>${open}</dd>
       </dl>
     </section>`;
+}
+
+// ---------- Inspect mode: where does this data come from? ----------
+
+// Same dark card look as the friend pop-up.
+const inspectPopup = new maplibregl.Popup({ maxWidth: '290px', className: 'friend inspect', offset: 8 });
+const DAY_NAMES = { sun: 'Sunday', mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday' };
+const escapeHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+// Looks a few pixels around the tap, so thin paths are easy to hit on a phone.
+function inspect(ev) {
+  const { x, y } = ev.point;
+  const box = [[x - 8, y - 8], [x + 8, y + 8]];
+  const hit = (layers) => map.queryRenderedFeatures(box, { layers })[0];
+  const blue = hit(['bluelights']);
+  const place = hit(['buildings']);
+  const path = hit(['paths-solid', 'paths-dashed']);
+  if (blue) showBlueLight(blue);
+  else if (place) showPlace(place);
+  else if (path) showPath(path.properties.i, ev.lngLat);
+  else inspectPopup.remove();
+}
+
+function showBlueLight(f) {
+  const { name, source } = f.properties;
+  inspectPopup.setLngLat(f.geometry.coordinates).setHTML(`
+    <h3>${escapeHtml(name)}</h3>
+    <p>Location from ${source === 'osm' ? 'OpenStreetMap' : 'our list (data/bluelights.csv)'}.</p>
+    <p class="fine">Only mapped phones are shown. There are more on campus.</p>
+    <a href="${LINKS.blueLights}" target="_blank" rel="noopener">Cornell Police: Blue Light services</a>`).addTo(map);
+}
+
+function showPlace(f) {
+  const b = buildings.find((x) => x.name === f.properties.name);
+  if (!b) return;
+  const date = currentDate();
+  const day = DAYS[date.getDay()];
+  const today = b.hours[day];
+  const todayText = today ? today.map(([o, c]) => `${o}–${c}`).join(', ') : 'closed';
+  inspectPopup.setLngLat([b.lng, b.lat]).setHTML(`
+    <h3>${escapeHtml(b.name)}</h3>
+    <p><b>${isOpen(b, date) ? 'Open' : 'Closed'}</b> at ${fmtTime(date)}${b.kind ? ` · ${escapeHtml(b.kind.replaceAll('_', ' '))}` : ''}</p>
+    <p>${DAY_NAMES[day]}: ${todayText}</p>
+    <p class="fine">${b.source === 'osm'
+      ? `Hours from OpenStreetMap (<code>${escapeHtml(b.hours_text)}</code>). They may be out of date.`
+      : 'Hours from our list (data/buildings.csv).'}</p>`).addTo(map);
+}
+
+function showPath(i, lngLat) {
+  const e = edges[i];
+  // Snap the tap onto the path, so a copied row lands on this segment.
+  const spot = turf.nearestPointOnLine(turf.lineString(e.coords), [lngLat.lng, lngLat.lat]).geometry.coordinates;
+  const title = e.name ?? e.highway.replaceAll('_', ' ');
+  const blue = e.dist_to_bluelight_m == null ? 'no data' : `${e.dist_to_bluelight_m} m`;
+  inspectPopup.setLngLat(spot).setHTML(`
+    <h3>${escapeHtml(title)}</h3>
+    <dl class="stats">
+      <dt>Lighting</dt><dd>${e.lighting}</dd>
+      <dt>Source</dt><dd>${e.lighting_source}</dd>
+      <dt>OSM <code>lit</code> tag</dt><dd>${e.lit ? escapeHtml(e.lit) : 'none'}</dd>
+      <dt>Path type</dt><dd>${escapeHtml(e.highway)}</dd>
+      <dt>Next to woods</dt><dd>${e.isolated ? 'yes' : 'no'}</dd>
+      <dt>Nearest mapped Blue Light</dt><dd>${blue}</dd>
+      <dt>Length</dt><dd>${Math.round(e.length_m)} m</dd>
+    </dl>
+    <p class="fine">${SOURCE_TEXT[e.lighting_source] ?? ''}</p>
+    <p><b>Standing here after dark?</b></p>
+    <div class="verify">
+      <button data-status="lit">It's lit</button>
+      <button data-status="dark">It's dark</button>
+    </div>
+    <p class="verify-out fine"></p>`).addTo(map);
+
+  for (const btn of inspectPopup.getElement().querySelectorAll('.verify button')) {
+    btn.addEventListener('click', () => copyVerifiedRow(spot, btn.dataset.status));
+  }
+}
+
+// Builds one line for data/verified_lighting.csv (lat,lng,status,note) and copies it.
+async function copyVerifiedRow([lng, lat], status) {
+  const row = `${lat.toFixed(6)},${lng.toFixed(6)},${status},checked ${toInputValue(new Date()).replace('T', ' ')}`;
+  const out = inspectPopup.getElement().querySelector('.verify-out');
+  let copied = false;
+  try {
+    await navigator.clipboard.writeText(row);
+    copied = true;
+  } catch {
+    // Clipboard can be blocked (e.g. plain http on a phone). The row is still shown below.
+  }
+  out.innerHTML = `${copied ? 'Copied! ' : ''}Add this line to <code>data/verified_lighting.csv</code>, then run
+    <code>node scripts/build-graph.mjs</code>:<br><code class="row-text">${row}</code>`;
 }

@@ -152,3 +152,9 @@ code { font-size: 12px; }
     border-radius: 16px;
   }
 }
+
+/* Inspect pop-up: "It's lit / It's dark" buttons and the copied CSV row */
+.inspect .stats { font-size: 12px; }
+.verify { display: flex; gap: 6px; }
+.verify button { flex: 1; min-height: 36px; }
+.row-text { display: block; margin-top: 4px; padding: 4px 6px; background: #111318; border-radius: 6px; user-select: all; word-break: break-all; }
