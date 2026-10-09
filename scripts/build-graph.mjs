@@ -25,7 +25,11 @@ const WALKABLE = [
 ];
 
 // The main Overpass server is sometimes "too busy", so fall back to a mirror.
-const OVERPASS_SERVERS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+const OVERPASS_SERVERS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const readJson = (file) => (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null);
@@ -58,9 +62,14 @@ async function nominatim(q) {
 
 // Runs one Overpass query, trying each server in turn. A busy server answers with an
 // HTML error page instead of JSON, so a failed JSON parse also moves on to the next one.
+// If every server fails, waits 15 seconds and goes round once more.
 async function overpassFetch(query) {
   const errors = [];
-  for (const url of OVERPASS_SERVERS) {
+  for (const url of [...OVERPASS_SERVERS, ...OVERPASS_SERVERS]) {
+    if (errors.length === OVERPASS_SERVERS.length) {
+      console.log('All Overpass servers are busy. Waiting 15 seconds, then trying again...');
+      await sleep(15000);
+    }
     try {
       const res = await fetch(url, {
         method: 'POST',
@@ -455,6 +464,73 @@ function report(edges) {
   console.log(`Isolated (near woods): ${((iso / total) * 100).toFixed(1)}%`);
 }
 
+// ---------- Searchable places (named buildings, amenities, bus stops) ----------
+
+const PLACE_AMENITIES = [
+  'library', 'cafe', 'restaurant', 'fast_food', 'bar', 'pub', 'community_centre', 'university',
+  'college', 'theatre', 'cinema', 'place_of_worship', 'clinic', 'pharmacy', 'bank', 'post_office',
+  'arts_centre', 'townhall', 'police', 'fire_station', 'parking',
+];
+
+// A third small query, cached on its own like the extras.
+async function overpassPlaces(bbox) {
+  const b = [bbox.south, bbox.west, bbox.north, bbox.east].map((n) => n.toFixed(6)).join(',');
+  const query = `[out:json][timeout:90];
+(
+  way["building"]["name"](${b});
+  relation["building"]["name"](${b});
+  nwr["amenity"~"^(${PLACE_AMENITIES.join('|')})$"]["name"](${b});
+  nwr["shop"]["name"](${b});
+  nwr["tourism"="museum"]["name"](${b});
+  node["highway"="bus_stop"]["name"](${b});
+);
+out center tags;`;
+
+  const file = path.join(RAW, 'overpass-places.json');
+  const cached = readJson(file);
+  if (cached && cached.query === query) {
+    console.log('Overpass places: using cached data/raw/overpass-places.json');
+    return cached.response;
+  }
+  console.log('Overpass places: downloading named buildings and places for search...');
+  const response = await overpassFetch(query);
+  writeJson(file, { query, fetched_at: new Date().toISOString(), response });
+  return response;
+}
+
+// One entry per name (the first one wins), for the app's "Where to?" search.
+function searchablePlaces(elements, buildings) {
+  const byName = new Map();
+  const add = (name, lat, lng, kind) => {
+    const key = name.toLowerCase();
+    if (!byName.has(key) && Number.isFinite(lat) && Number.isFinite(lng)) {
+      byName.set(key, { name, lat: round6(lat), lng: round6(lng), kind });
+    }
+  };
+  for (const b of buildings) add(b.name, b.lat, b.lng, b.kind ?? 'place');
+  for (const el of elements) {
+    const t = el.tags ?? {};
+    const kind = t.highway === 'bus_stop' ? 'bus_stop' : t.amenity || t.shop || t.tourism || 'building';
+    add(t.name, el.lat ?? el.center?.lat, el.lon ?? el.center?.lon, kind);
+  }
+  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// For each edge, the indexes of buildings within `meters` of it. Done here, once, so the
+// app doesn't have to measure every path against every building each time it loads.
+function nearbyBuildings(edges, buildings, meters) {
+  return edges.map((e) => {
+    const xs = e.coords.map((c) => c[0]);
+    const ys = e.coords.map((c) => c[1]);
+    const box = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+    const near = [];
+    buildings.forEach((b, i) => {
+      if (nearBbox([b.lng, b.lat], box, meters) && edgeNear(e, [b.lng, b.lat], meters)) near.push(i);
+    });
+    return near;
+  });
+}
+
 // ---------- Main ----------
 
 fs.mkdirSync(RAW, { recursive: true });
@@ -463,25 +539,17 @@ const bbox = bboxAround([start, end, campus], MARGIN_M);
 console.log(`Bounding box: S ${bbox.south.toFixed(5)} W ${bbox.west.toFixed(5)} N ${bbox.north.toFixed(5)} E ${bbox.east.toFixed(5)}`);
 const data = await overpass(bbox);
 const extras = await overpassExtras(bbox);
+// Search names are nice to have, so a busy server here only warns. Run again later to fill them in.
+const placesData = await overpassPlaces(bbox).catch((err) => {
+  console.warn("\nWARNING: couldn't download places for search, so search only knows places with hours.");
+  console.warn(err.message.split('\n')[0] + '\nRun "npm run data" again later.\n');
+  return { elements: [] };
+});
 const woods = woodsPolygons(data.elements);
 const { nodes, edges } = buildGraph(data.elements);
 const bluelightList = blueLights(extras);
 const counts = annotate(edges, data.elements, woods, bluelightList);
 console.log(`Found ${woods.length} woods polygons, ${counts.lamps} street lamps, ${counts.verified} verified points, ${counts.bluelights} Blue Lights`);
-
-const out = {
-  generated_at: new Date().toISOString(),
-  // The app's default route: places[0] -> places[1].
-  places: [start, end].map(({ name, lat, lng }) => ({ name, lat, lng })),
-  bbox,
-  bluelights: bluelightList,
-  nodes,
-  edges: edges.map(({ from, to, coords, length_m, highway, footway, lit, name, surface, lighting, lighting_source, isolated, dist_to_bluelight_m }) => ({
-    from, to, coords, length_m, highway, footway, lit, name, surface, lighting, lighting_source, isolated, dist_to_bluelight_m,
-  })),
-};
-fs.writeFileSync(path.join(ROOT, 'public', 'graph.json'), JSON.stringify(out));
-console.log(`Wrote public/graph.json (${nodes.length} nodes, ${edges.length} edges)`);
 
 // ---------- Building hours for the app's clock slider ----------
 
@@ -526,4 +594,26 @@ for (const el of extras.elements) {
 fs.writeFileSync(path.join(ROOT, 'public', 'buildings.json'), JSON.stringify(buildings, null, 2));
 const fromCsv = buildings.filter((b) => b.source === 'csv').length;
 console.log(`Wrote public/buildings.json (${buildings.length} places: ${fromCsv} from buildings.csv, ${buildings.length - fromCsv} from OSM; skipped ${unreadable} OSM places with hours we can't read)`);
+
+// ---------- Graph and search list ----------
+
+const BUILDING_NEAR_M = 30; // keep in step with the app: a building "on" a path is this close
+const near = nearbyBuildings(edges, buildings, BUILDING_NEAR_M);
+const out = {
+  generated_at: new Date().toISOString(),
+  // The app's default route: places[0] -> places[1].
+  places: [start, end].map(({ name, lat, lng }) => ({ name, lat, lng })),
+  bbox,
+  bluelights: bluelightList,
+  nodes,
+  edges: edges.map(({ from, to, coords, length_m, highway, lit, name, lighting, lighting_source, isolated, dist_to_bluelight_m }, i) => ({
+    from, to, coords, length_m, highway, lit, name, lighting, lighting_source, isolated, dist_to_bluelight_m, near_buildings: near[i],
+  })),
+};
+fs.writeFileSync(path.join(ROOT, 'public', 'graph.json'), JSON.stringify(out));
+console.log(`Wrote public/graph.json (${nodes.length} nodes, ${edges.length} edges)`);
+
+const search = searchablePlaces(placesData.elements, buildings);
+fs.writeFileSync(path.join(ROOT, 'public', 'places.json'), JSON.stringify(search));
+console.log(`Wrote public/places.json (${search.length} searchable places)`);
 report(edges);
