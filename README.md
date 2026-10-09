@@ -29,7 +29,7 @@ dark-or-unknown stretch, and which open places you pass.
 - **No crime data, ever.** Only lighting, isolation, Blue Light distance, and open places.
 - **Never says "safe."** Lit shows tradeoffs and leaves the choice to you.
 - **Every lighting value has a source:** `verified`, `osm`, `mapillary`, `estimated`, or `unknown`.
-  Tap **Inspect**, then any path, to see where its value comes from.
+  Tap any path on the map to see where its value comes from.
 
 ## Run it
 
@@ -91,7 +91,7 @@ Two other files work the same way:
 
 - Most paths are `estimated` (a guess from the path type), so the app labels them that way and
   draws them dashed.
-- OpenStreetMap hours can be out of date. The Inspect card shows the original hours text.
+- OpenStreetMap hours can be out of date. Tapping a place shows the original hours text.
 - Only mapped Blue Lights are shown. There are more on campus.
 - A night check marks every path segment within 20 m. OSM segments can be long, so one check
   can verify a few hundred meters.
