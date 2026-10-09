@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "data": "node scripts/build-graph.mjs",
     "build": "vite build",
     "preview": "vite preview"
   },
